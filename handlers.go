@@ -10,7 +10,7 @@ type game struct {
 	inProgress bool
 	failed     int
 	answer     []rune
-	guessed    []rune // array of chars
+	guessed    []rune
 	channelId  string
 	msgId      string
 	session    *discordgo.Session
@@ -23,18 +23,6 @@ func containsChar(arr []rune, char rune) bool {
 		}
 	}
 	return false
-}
-
-func (g *game) getMask() []rune {
-	masked := g.answer
-	for _, aChar := range masked {
-		for _, gChar := range g.guessed {
-			if gChar == aChar {
-				aChar = 0
-			}
-		}
-	}
-	return masked
 }
 
 func (g *game) gameState() string {
@@ -62,9 +50,15 @@ func shuffleWord() []rune {
 	return []rune("phone")
 }
 
-func maskWord(word []rune) []rune {
+func maskWord(word []rune, guessed []rune) []rune {
 	for i := 0; i < len(word); i++ {
-		if word[i] != ' ' {
+    shouldReveal := false
+    for _, guess := range guessed {
+      if word[i] == guess {
+        shouldReveal = true
+      }
+    }
+		if !shouldReveal && (word[i] != ' ') {
 			word[i] = '_'
 		}
 	}
@@ -73,7 +67,7 @@ func maskWord(word []rune) []rune {
 
 func (g *game) start(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	word := shuffleWord()
-	masked := maskWord(word)
+	masked := maskWord(word, g.guessed)
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
